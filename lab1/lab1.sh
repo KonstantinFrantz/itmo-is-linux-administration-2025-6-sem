@@ -8,12 +8,10 @@ while IFS=: read -r line; do
 done </etc/passwd
 
 # 2
-last_change=$(chage -l root | grep "Последний раз пароль был изменён" | cut -d : -f2)
-echo "$last_change" >>work3.log
+chage -l root | grep "Последний раз пароль был изменён" | cut -d : -f2 >>work3.log
 
 # 3
-groups=$(cut -d: -f1 /etc/group | tr '\n' ',' | sed 's/,$/\n/')
-echo "$groups" >>work3.log
+cut -d: -f1 /etc/group | tr '\n' ',' | sed 's/,$/\n/' >>work3.log
 
 # 4
 echo "Be careful!" >/etc/skel/readme.txt
@@ -28,15 +26,13 @@ groupadd g1
 usermod -aG g1 u1
 
 # 8
-u1_info=$(id u1)
-echo "$u1_info" >>work3.log
+id u1 >>work3.log
 
 # 9
 usermod -aG g1 myuser
 
 # 10
-g1_users=$(grep "g1" /etc/group | cut -d: -f4)
-echo "$g1_users" >>work3.log
+grep "g1" /etc/group | cut -d: -f4 >>work3.log
 
 # 11
 usermod -s /usr/bin/mc u1
