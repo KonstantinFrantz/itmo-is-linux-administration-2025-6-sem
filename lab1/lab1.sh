@@ -1,11 +1,7 @@
 #!/bin/bash
 
 # 1
-while IFS=: read -r line; do
-  username=$(echo "$line" | cut -d : -f1)
-  uid=$(echo "$line" | cut -d : -f3)
-  echo "user $username has id $uid" >>work3.log
-done </etc/passwd
+awk -F: '{print "user " $1 " has id " $3 >> "work3.log"}' /etc/passwd
 
 # 2
 chage -l root | grep "Последний раз пароль был изменён" | cut -d : -f2 >>work3.log
