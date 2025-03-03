@@ -1,0 +1,116 @@
+# 1
+
+cat /etc/apt/sources.list | grep "^deb" | cut -d ' ' -f2 | uniq
+
+# 2
+
+apt update
+
+# 3
+
+apt show build-essential
+
+# 4
+
+apt install build-essential -V
+
+# 5
+
+apt-cache search "clone with a bastard algorithm"
+
+# 6
+
+apt-get source bastet
+
+# 7
+
+cd bastet-0.43
+sudo apt install libboost-dev libncurses-dev
+make
+
+# 8
+
+echo "install:         
+    cp bastet /usr/local/bin/                           
+    chmod 755 /usr/local/bin/bastet" >> Makefile
+
+make install
+
+# 10
+
+dpkg --get-selections | grep install | cut -f1 > task10.log
+
+# 11
+
+apt-cache depends gcc > task11.log
+
+# 12
+
+apt-cache rdepends libgpm2 > task12.log
+
+# 13
+
+mkdir localrepo
+wget http://snapshot.debian.org/archive/debian/20250209T210016Z/pool/main/h/htop/htop_3.3.0-5_amd64.deb
+wget http://snapshot.debian.org/archive/debian/20230227T025930Z/pool/main/h/htop/htop_3.2.2-2_amd64.deb
+wget http://snapshot.debian.org/archive/debian/20220603T163609Z/pool/main/h/htop/htop_3.2.1-1_amd64.deb
+wget http://snapshot.debian.org/archive/debian/20220502T205642Z/pool/main/h/htop/htop_3.2.0-1_amd64.deb
+wget http://snapshot.debian.org/archive/debian/20210502T143907Z/pool/main/h/htop/htop_3.0.5-7_amd64.deb
+
+# 14
+
+dpkg-scanpackages --multiversion . > Packages
+
+echo "Origin: My Local Repo
+Label: My Local Repo
+Suite: stable
+Version: 1.0
+Codename: myrepo
+Architectures: amd64
+Components: main
+Description: My local APT repository" > Release
+
+# 15
+
+echo "deb [trusted=yes] file:/root/localrepo ./" > /etc/apt/sources.list.d/localrepo.list
+apt update
+
+# 16
+
+apt-cache policy
+
+# 17
+
+apt-cache madison htop > task16.log
+
+# 18
+
+apt install htop=3.2.2-2
+
+# 19
+
+apt download nano
+dpkg-deb -R nano_7.2-1+deb12u1_amd64.deb new_nano/
+cd new_nano
+mkdir usr/bin
+ln -s usr/shared/nano usr/bin/newnano
+dpkg-deb -b . ../new_nano.deb
+dpkg -i ../nano_mod.deb
+
+# 20
+
+APT has Super Cow Power
+
+                 (__) 
+                 (oo) 
+           /------\/ 
+          / |    ||   
+         *  /\---/\ 
+            ~~   ~~   
+..."Have you mooed today?"...
+
+
+
+
+
+
