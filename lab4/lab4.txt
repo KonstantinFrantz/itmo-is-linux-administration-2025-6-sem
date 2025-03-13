@@ -1,0 +1,148 @@
+## Part 1
+
+# 1
+
+systemd-analize
+
+# 2
+
+systemd-analyze blame | grep service
+
+# 3
+
+systemd-analyze critical-chain sshd.service
+
+# 4
+
+systemd-analyze plot > plot.svg
+
+## Part 2
+
+# 1
+
+systemctl --type=service --state=running
+
+# 2
+
+systemctl list-unit-files --state=enabled
+
+# 3
+
+systemctl list-dependencies sshd.service
+
+# 4
+
+systemctl status cron.service
+
+#if not active
+systemctl start cron.service 
+
+# 5
+
+systemctl show cron.service
+
+# 6
+
+systemctl disable cron.service
+
+## Part 3
+
+# 1
+
+cd /etc/systemd/system
+
+echo "
+[Unit]
+Description=Print date at log when system starts
+After=networking.service
+Requires=networking.service
+
+[Service]
+Type=oneshot
+ExecStart=/bin/bash -c "/usr/bin/logger \"$(/usr/bin/date)\""
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target" > mymsg.service
+
+# 2
+
+systemctl enable mymsg.service
+
+# 3
+
+systemctl start mymsg.service
+
+## Part 4
+
+# 1
+
+journalctl
+
+# 2
+
+journalctl -u mymsg.service
+
+# 3
+
+journalctl -p 3
+
+# 4
+
+journalctl --disk-usage
+
+## Part 5
+
+# 1
+
+fdisk /dev/sdb
+n
+p
+enter
+enter
+enter
+w
+
+makefs.ext4 /dev/sdb1
+
+mkdir /mnt/mydata
+
+# 2
+
+echo "
+[Unit]
+Description=Mount sdb1 to /mnt/mydata
+
+[Mount]
+What=/dev/sdb1
+Where=/mnt/mydata
+Type=ext4
+Options=defaults
+
+[Install]
+WantedBy=multi-user.target" > mnt-mydata.mount
+
+# 3
+
+systemctl enable mnt-mydata.mount
+systemctl start mnt-mydata.mount
+
+## Part 6
+
+# 2
+
+echo "
+[Unit]
+Description=Automount for mydata
+
+[Automount]
+Where=/mnt/mydata
+TimeoutIdleSec=60
+
+[Install]
+WantedBy=multi-user.target" > mnt-mydata.automount
+
+# 3
+
+systemctl enable mnt-mydata.automount
+systemctl start mnt-mydata.automount
