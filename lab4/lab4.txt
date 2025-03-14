@@ -2,7 +2,7 @@
 
 # 1
 
-systemd-analize
+systemd-analyze
 
 # 2
 
@@ -103,7 +103,7 @@ enter
 enter
 w
 
-makefs.ext4 /dev/sdb1
+mkfs.ext4 /dev/sdb1
 
 mkdir /mnt/mydata
 
