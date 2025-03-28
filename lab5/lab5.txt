@@ -1,0 +1,351 @@
+# 1
+
+useradd user-56
+
+systemctl set-property user-56.slice CPUQuota=50%
+
+# 2
+
+cgcreate -g memory:/memory_limit
+
+cgset -r memory.max=1060M memory_limit
+
+cgexec -g memory:memory_limit tail /dev/zero
+
+Out: Killed
+
+# 3
+
+cgcreate -g io:/backup_limits
+
+cgset -r io.max="8:0 riops=1560 wiops=1060" backup_limits
+
+sudo cgexec -g io:backup_limits dd if=/dev/zero of=/tmp/test_file bs=4k count=10000 oflag=direct
+
+Out: 4.4 MB/s
+
+cgexec -g io:backup_limits dd if=/tmp/test_file of=/dev/null bs=4k count=10000 iflag=direct
+
+Out: 6.4 MB/s
+
+# 4
+
+cgcreate -g cpuset:/cpu_set
+
+cgset -r cpuset.cpus=0 cpu_set
+
+cgexec -g cpuset:cpu_set top
+
+sudo taskset -p 9283
+
+Out: pid 9283's current affinity mask: 1
+
+# 5
+
+#!/bin/bash
+
+PID=$1
+GROUP_NAME="dynamic_process_$PID"
+
+cgcreate -g cpu:/$GROUP_NAME
+
+echo $PID >> /sys/fs/cgroup/$GROUP_NAME/cgroup.procs
+
+while true; do
+    CPU_LOAD=$(top -bn1 | grep "Cpu(s)" | awk '{print $2}' | cut -d'.' -f1)
+    
+    if [ $CPU_LOAD -lt 20 ]; then
+        cgset -r cpu.max="80000 100000" $GROUP_NAME
+    elif [ $CPU_LOAD -gt 60 ]; then
+        cgset -r cpu.max="30000 100000" $GROUP_NAME
+    fi
+    
+    sleep 5
+done
+
+# 6
+
+# 5
+
+#!/bin/bash
+
+PID=$1
+GROUP_NAME="dynamic_process_$PID"
+
+cgcreate -g cpu:/$GROUP_NAME
+
+echo $PID >> /sys/fs/cgroup/$GROUP_NAME/cgroup.procs
+
+while true; do
+  CPU_LOAD=$(top -bn1 | grep "Cpu(s)" | awk '{print $2}' | cut -d'.' -f1)
+          
+  if [ $CPU_LOAD -lt 20 ]; then
+    cgset -r cpu.max="80000 100000" $GROUP_NAME
+  elif [ $CPU_LOAD -gt 60 ]; then
+    cgset -r cpu.max="30000 100000" $GROUP_NAME
+  fi
+  
+  sleep 5
+done
+
+# 6
+
+unshare -u bash
+
+hostname isolated-student-56
+
+hostname
+
+Out: isolated-student-56
+
+## From different tty
+
+hostname
+
+Out: d12
+
+# 7
+
+unshare --pid --fork bash
+
+mount -t proc proc /proc
+
+ps aux
+
+Out:
+
+USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+root           1  0.0  0.0   7196  3828 pts/2    S    14:42   0:00 bash
+root           5  0.0  0.1  11084  4452 pts/2    R+   14:42   0:00 ps aux
+
+## From different tty
+
+Out:
+
+USER         PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND
+root           1  0.0  0.3 169084 13520 ?        Ss   Mar13   0:10 /sbin/init
+root           2  0.0  0.0      0     0 ?        S    Mar13   0:00 [kthreadd]
+root           3  0.0  0.0      0     0 ?        I<   Mar13   0:00 [rcu_gp]
+root           4  0.0  0.0      0     0 ?        I<   Mar13   0:00 [rcu_par_gp]
+root           5  0.0  0.0      0     0 ?        I<   Mar13   0:00 [slub_flushwq]
+root           6  0.0  0.0      0     0 ?        I<   Mar13   0:00 [netns]
+root           8  0.0  0.0      0     0 ?        I<   Mar13   0:00 [kworker/0:0H-events_highpri]
+...
+
+# 8
+
+unshare --mount bash
+
+mkdir /tmp/private_$(whoami)
+
+df -h | grep private_$(whoami)
+
+Out:
+
+tmpfs           2.0G     0  2.0G   0% /tmp/private_root
+
+## From different tty
+
+Out: <empty>
+
+# 9
+
+unshare --net bash
+
+ping 8.8.8.8
+
+Out:
+
+ping: connect: Network is unreachable
+
+## From different tty
+
+PING 8.8.8.8 (8.8.8.8) 56(84) bytes of data.
+64 bytes from 8.8.8.8: icmp_seq=1 ttl=109 time=12.6 ms
+64 bytes from 8.8.8.8: icmp_seq=2 ttl=109 time=10.8 ms
+^C
+--- 8.8.8.8 ping statistics ---
+2 packets transmitted, 2 received, 0% packet loss, time 1002ms
+rtt min/avg/max/mdev = 10.786/11.716/12.647/0.930 ms
+
+# 10
+
+## a
+
+mkdir -p ~/overlay_/{lower,upper,work,merged}
+
+echo "Оригинальный текст из LOWER" > ~/overlay_/lower/56_original.txt
+
+mount -t overlay overlay -o lowerdir=~/overlay_/lower,upperdir=~/overlay_/upper,workdir=~/overlay_/work ~/overlay_/merged
+
+## b
+
+rm ~/overlay_/merged/56_original.txt
+
+ls -hl ~/overlay_/upper
+
+Out:
+
+total 0
+c--------- 2 root root 0, 0 Mar 21 05:19 56_original.txt
+
+rm ~/overlay_/upper/56_original.txt
+
+## d
+
+#!/bin/bash
+
+LOWER_DIR=${BASE_DIR}/lower
+UPPER_DIR=${BASE_DIR}/upper
+WORK_DIR=${BASE_DIR}/work
+MERGED_DIR=${BASE_DIR}/merged
+AUDIT_LOG=56_audit.log
+
+find ${UPPER_DIR} -type c -o -name ".wh.*" | while read file; do
+    echo "Found: ${file}" >> ${AUDIT_LOG}
+done
+
+for file in $(find ${LOWER_DIR} -type f -o -type d); do
+    rel_path=${file#${LOWER_DIR}/}
+    if [ -n "$rel_path" ]; then
+        if [ ! -e "${MERGED_DIR}/${rel_path}" ]; then
+            echo "Missing in merged: ${rel_path}" >> ${AUDIT_LOG}
+        elif [ -f "$file" ] && [ -f "${MERGED_DIR}/${rel_path}" ]; then
+            if ! cmp -s "$file" "${MERGED_DIR}/${rel_path}"; then
+                echo "Content mismatch: ${rel_path}" >> ${AUDIT_LOG}
+            fi
+        fi
+    fi
+done
+
+# 11
+
+## Dockerfile
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+RUN useradd --system user56 && \
+    chown -R user56:user56 /app
+
+USER user56
+
+COPY --chown=user56:user56 . .
+
+EXPOSE 5000
+
+CMD ["python", "app.py"]
+
+## requirements.txt
+
+flask==2.3.3
+
+## .dockerignore
+
+.git
+.gitignore
+.gitattributes
+
+
+.codeclimate.yml
+.travis.yml
+.taskcluster.yml
+
+docker-compose.yml
+Dockerfile
+.docker
+.dockerignore
+
+**/__pycache__/
+**/*.py[cod]
+
+*.so
+
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+*.manifest
+*.spec
+
+pip-log.txt
+pip-delete-this-directory.txt
+
+htmlcov/
+.tox/
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+
+*.mo
+*.pot
+
+*.log
+
+docs/_build/
+
+target/
+
+.env
+.venv/
+venv/
+
+.idea
+
+.ropeproject
+**/.ropeproject
+
+**/*.swp
+
+.vscode/
+
+# 12
+
+version: '3.8'
+
+services:
+  db:
+    image: mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: kostya_db_pass
+      MYSQL_DATABASE: wordpress
+    volumes:
+      - db-data:/var/lib/mysql
+    restart: always
+
+  wordpress:
+    image: wordpress:latest
+    ports:
+      - "2056:80" 
+    environment:
+      WORDPRESS_DB_HOST: db:3306
+      WORDPRESS_DB_NAME: wordpress
+      WORDPRESS_DB_USER: root
+      WORDPRESS_DB_PASSWORD: kostya_db_pass
+    volumes:
+      - kostya-wp-data:/var/www/html
+    depends_on:
+      - db
+    restart: always
+
+volumes:
+  kostya-wp-data:
+  db-data:
