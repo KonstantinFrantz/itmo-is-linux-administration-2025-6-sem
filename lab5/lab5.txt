@@ -170,23 +170,27 @@ rm ~/overlay_/upper/56_original.txt
 
 #!/bin/bash
 
-LOWER_DIR=${BASE_DIR}/lower
-UPPER_DIR=${BASE_DIR}/upper
-WORK_DIR=${BASE_DIR}/work
-MERGED_DIR=${BASE_DIR}/merged
+LOWER_DIR=~/overlay_/lower
+UPPER_DIR=~/overlay_/upper
+WORK_DIR=~/overlay_/work
+MERGED_DIR=~/overlay_/merged
 AUDIT_LOG=56_audit.log
+
+> ${AUDIT_LOG}
 
 find ${UPPER_DIR} -type c -o -name ".wh.*" | while read file; do
     echo "Found: ${file}" >> ${AUDIT_LOG}
 done
 
-for file in $(find ${LOWER_DIR} -type f -o -type d); do
-    rel_path=${file#${LOWER_DIR}/}
-    if [ -n "$rel_path" ]; then
+cd ${LOWER_DIR}
+find . -type f -o -type d | while read file; do
+    if [ "$file" != "." ]; then
+        rel_path=${file#./}
+
         if [ ! -e "${MERGED_DIR}/${rel_path}" ]; then
             echo "Missing in merged: ${rel_path}" >> ${AUDIT_LOG}
-        elif [ -f "$file" ] && [ -f "${MERGED_DIR}/${rel_path}" ]; then
-            if ! cmp -s "$file" "${MERGED_DIR}/${rel_path}"; then
+        elif [ -f "${LOWER_DIR}/${rel_path}" ] && [ -f "${MERGED_DIR}/${rel_path}" ]; then
+            if ! cmp -s "${LOWER_DIR}/${rel_path}" "${MERGED_DIR}/${rel_path}"; then
                 echo "Content mismatch: ${rel_path}" >> ${AUDIT_LOG}
             fi
         fi
